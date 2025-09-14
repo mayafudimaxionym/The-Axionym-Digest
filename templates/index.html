@@ -1,4 +1,4 @@
-<!-- templates/index.html -->
+<!-- templates/index.html (No changes needed from the last correct version) -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6,7 +6,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>The Axionym Digest Control Center</title>
     <style>
-        /* ... all previous styles remain the same ... */
         body { display: flex; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; background-color: #f8f9fa; margin: 0; }
         .debug-panel { width: 30%; background-color: #2b3035; color: #f8f8f2; padding: 20px; height: 100vh; overflow-y: auto; position: fixed; box-sizing: border-box; }
         .main-content { width: 70%; margin-left: 30%; padding: 20px; box-sizing: border-box; }
@@ -19,72 +18,56 @@
         .step-container.completed { border-left-color: #28a745; }
         .prompt-box { width: 95%; height: 150px; font-family: monospace; font-size: 14px; padding: 15px; border-radius: 5px; border: 1px solid #ddd; }
         .action-button { background-color: #007bff; color: white; border: none; padding: 12px 20px; font-size: 16px; border-radius: 5px; cursor: pointer; margin-top: 10px; }
-        /* NEW STYLES for utility buttons */
         .utility-button { background-color: #6c757d; margin-left: 10px; }
         .copy-button { background-color: #17a2b8; }
         .prompt-controls { margin-top: 10px; }
+        .message { padding: 15px; border-radius: 5px; margin: 20px 0; }
+        .message.error { background-color: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; }
+        .message.success { background-color: #d4edda; border: 1px solid #c3e6cb; color: #155724; }
+        .article-list { list-style-type: none; padding: 0; margin-top: 20px; }
+        .article-item { margin-bottom: 15px; padding: 15px; border: 1px solid #eee; border-radius: 8px; }
+        .article-item label { display: block; font-weight: bold; cursor: pointer; }
+        .article-item p { margin: 5px 0 0; color: #555; font-size: 0.9em; }
+        input[type="checkbox"] { margin-right: 10px; transform: scale(1.2); }
     </style>
 </head>
 <body>
-    <div class="debug-panel"><!-- ... unchanged ... --></div>
+    <div class="debug-panel"><pre><code>{{ debug_state or 'State not available.' }}</code></pre></div>
     <div class="main-content">
         <div class="container">
             <h1>Digest Generation Workflow</h1>
             {% if message %}<div class="message {{ message_type or '' }}">{{ message }}</div>{% endif %}
-
-            <!-- ======================= STEP 1: DEEP RESEARCH ======================= -->
             <div id="step1" class="step-container {{ 'active' if step == 1 else '' }} {{ 'completed' if step > 1 else '' }}">
                 <h2>Step 1: Deep Research</h2>
                 <form action="/run_step1" method="post">
                     <textarea name="prompt_step1" id="prompt_step1_text" class="prompt-box">{{ prompts.step1 }}</textarea>
-                    <div class="prompt-controls">
-                        <button type="submit" class="action-button">Execute Research</button>
-                        <!-- NEW BUTTONS -->
-                        <button type="button" class="action-button utility-button" onclick="updatePrompt('step1')">Save Prompt</button>
-                        <button type="button" class="action-button utility-button" onclick="updatePrompt('step1', true)">Reset</button>
-                    </div>
+                    <div class="prompt-controls"><button type="submit" class="action-button">Execute</button><button type="button" class="action-button utility-button" onclick="updatePrompt('step1')">Save</button><button type="button" class="action-button utility-button" onclick="updatePrompt('step1', true)">Reset</button></div>
                 </form>
             </div>
-
-            <!-- ======================= STEP 2: ANALYTICS & SELECTION ======================= -->
-            <!-- ... The structure is the same, just with added Save/Reset buttons ... -->
             <div id="step2" class="step-container {{ 'active' if step == 2 else '' }} {{ 'completed' if step > 2 else '' }}">
                 {% if step >= 2 %}
-                <h2>Step 2: Analytics & Selection</h2>
+                <h2>Step 2: Selection</h2>
                 <form action="/run_step2" method="post">
                     <textarea name="prompt_step2" id="prompt_step2_text" class="prompt-box">{{ prompts.step2 }}</textarea>
-                    <div class="prompt-controls">
-                        <button type="button" class="action-button utility-button" onclick="updatePrompt('step2')">Save Prompt</button>
-                        <button type="button" class="action-button utility-button" onclick="updatePrompt('step2', true)">Reset</button>
-                    </div>
-                    <h3>Select 5 Articles to Analyze:</h3>
-                    <!-- ... article list remains the same ... -->
-                    <ul class="article-list">
-                        {% for article in results.step1 %}<li class="article-item"><label><input type="checkbox" name="selected_articles_indices" value="{{ loop.index0 }}">{{ article.title }}</label><p>{{ article.snippet }}</p></li>{% endfor %}
-                    </ul>
-                    <button type="submit" class="action-button">Execute Analysis & Select</button>
+                    <div class="prompt-controls"><button type="button" class="action-button utility-button" onclick="updatePrompt('step2')">Save</button><button type="button" class="action-button utility-button" onclick="updatePrompt('step2', true)">Reset</button></div>
+                    <h3>Select 5 Articles:</h3>
+                    <ul class="article-list">{% for article in results.step1 %}<li class="article-item"><label><input type="checkbox" name="selected_articles_indices" value="{{ loop.index0 }}">{{ article.title }}</label><p>{{ article.snippet }}</p></li>{% endfor %}</ul>
+                    <button type="submit" class="action-button">Execute</button>
                 </form>
                 {% endif %}
             </div>
-            
-            <!-- ======================= STEP 3: DEEP ANALYSIS ======================= -->
             <div id="step3" class="step-container {{ 'active' if step == 3 else '' }} {{ 'completed' if step > 3 else '' }}">
                 {% if step >= 3 %}
-                <h2>Step 3: Deep Analysis & Prompt Generation</h2>
+                <h2>Step 3: Deep Analysis</h2>
                 <form action="/run_step3" method="post">
                     <textarea name="prompt_step3" id="prompt_step3_text" class="prompt-box" style="height: 400px;">{{ prompts.step3 }}</textarea>
-                    <div class="prompt-controls">
-                         <button type="submit" class="action-button">Generate Final Digest</button>
-                         <button type="button" class="action-button utility-button" onclick="updatePrompt('step3')">Save Prompt</button>
-                    </div>
+                    <div class="prompt-controls"><button type="submit" class="action-button">Generate Digest</button><button type="button" class="action-button utility-button" onclick="updatePrompt('step3')">Save</button></div>
                 </form>
                 {% endif %}
             </div>
-
-            <!-- ======================= STEP 4: ILLUSTRATE & PUBLISH ======================= -->
             <div id="step4" class="step-container {{ 'active' if step == 4 else '' }}">
                 {% if step >= 4 %}
-                    <h2>Step 4: Illustrate & Publish</h2>
+                    <h2>Step 4: Publish</h2>
                     <form action="/run_step4" method="post">
                         <textarea name="final_markdown_digest" class="prompt-box" style="height: 400px;">{{ results.step4_markdown }}</textarea><br>
                         <button type="submit" class="action-button">Generate Tilda HTML</button>
@@ -93,52 +76,32 @@
                     <div id="step4_results" style="margin-top: 20px;">
                         <h3>Tilda.cc HTML Code:</h3>
                         <textarea id="tilda_html_code" class="prompt-box" style="height: 400px; background-color: #e9ecef;" readonly>{{ results.step4_tilda_html }}</textarea>
-                        <!-- NEW BUTTON -->
-                        <div class="prompt-controls">
-                            <button type="button" class="action-button copy-button" onclick="copyToClipboard('tilda_html_code')">Copy to Clipboard</button>
-                        </div>
+                        <div class="prompt-controls"><button type="button" class="action-button copy-button" onclick="copyToClipboard('tilda_html_code')">Copy</button></div>
                     </div>
                     {% endif %}
                 {% endif %}
             </div>
         </div>
     </div>
-
-    <!-- NEW JAVASCRIPT for buttons -->
     <script>
-        // --- Function for Save/Reset prompt buttons ---
         async function updatePrompt(stepKey, isReset = false) {
             const textArea = document.getElementById(`prompt_${stepKey}_text`);
-            const action = isReset ? 'reset' : 'save';
-            
             const response = await fetch('/update_prompt', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({
-                    step_key: stepKey,
-                    action: action,
-                    prompt_text: textArea.value
-                })
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ step_key: stepKey, action: isReset ? 'reset' : 'save', prompt_text: textArea.value })
             });
             const result = await response.json();
-            
-            if (result.success && isReset) {
-                textArea.value = result.new_prompt;
-            }
+            if (result.success && isReset) { textArea.value = result.new_prompt; }
             alert(result.message);
         }
-
-        // --- Function for Copy to Clipboard button ---
         function copyToClipboard(elementId) {
             const textArea = document.getElementById(elementId);
             textArea.select();
             document.execCommand('copy');
-            alert('HTML code copied to clipboard!');
+            alert('HTML copied to clipboard!');
         }
-
-        // --- Checkbox limit script (unchanged) ---
         const checkboxes = document.querySelectorAll('input[name="selected_articles_indices"]');
-        if (checkboxes.length > 0) { /* ... unchanged ... */ }
+        if (checkboxes.length > 0) { const limit = 5; checkboxes.forEach(cb => cb.addEventListener('change', () => { if (document.querySelectorAll('input[name="selected_articles_indices"]:checked').length > limit) { alert('You may only select up to 5 articles.'); cb.checked = false; }}));}
     </script>
 </body>
 </html>
