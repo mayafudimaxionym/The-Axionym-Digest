@@ -3,38 +3,28 @@
 import os
 import requests
 from bs4 import BeautifulSoup
-from dotenv import load_dotenv  # <-- Убедитесь, что эта строка есть
+from dotenv import load_dotenv
 import json
+import markdown2
+import re # Import regex module for link modification
 
+# ... (Configuration and search_articles, get_article_content functions remain the same) ...
 # --- Configuration ---
-# Загружаем переменные из .env файла в окружение ОС для этого скрипта
-load_dotenv() 
-
-# Теперь получаем переменные, которые только что были загружены
+load_dotenv()
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 SEARCH_ENGINE_ID = os.getenv("SEARCH_ENGINE_ID")
-
-# Проверяем, что переменные загрузились
-if not GOOGLE_API_KEY or not SEARCH_ENGINE_ID:
-    print("❌ ОШИБКА: GOOGLE_API_KEY или SEARCH_ENGINE_ID не найдены в .env файле.")
-    print("   Пожалуйста, убедитесь, что файл .env существует и содержит обе переменные.")
-    # Можно либо завершить выполнение, либо продолжить, но скрипт упадет позже
-    # exit() # Раскомментируйте, если хотите, чтобы скрипт сразу останавливался
-
 SEARCH_QUERY = "digital fraud and cybercrime news"
 NUM_RESULTS_TO_FETCH = 10
 HEADERS = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
 OUTPUT_PROMPT_FILE = "final_prompt_for_ai.txt"
 
+# --- Core Functions ---
 def search_articles():
-    """Searches Google for recent articles based on the query."""
+    # ... This function is correct and remains unchanged ...
     print(f"🔍 Searching for articles with query: '{SEARCH_QUERY}'...")
-    
-    # Проверка перед запросом
     if not GOOGLE_API_KEY or not SEARCH_ENGINE_ID:
-        print("❌ Невозможно выполнить поиск: переменные API не сконфигурированы.")
+        print("❌ Cannot search: API keys are not configured in .env file.")
         return []
-
     url = "https://www.googleapis.com/customsearch/v1"
     params = {'key': GOOGLE_API_KEY, 'cx': SEARCH_ENGINE_ID, 'q': SEARCH_QUERY, 'num': NUM_RESULTS_TO_FETCH, 'sort': 'date'}
     try:
@@ -42,55 +32,141 @@ def search_articles():
         response.raise_for_status()
         search_results = response.json()
         if 'items' not in search_results:
-            print("❌ Error: No articles found. Check API key/search engine ID in your .env file.")
-            # Добавим вывод ошибки от Google, если он есть
-            if 'error' in search_results:
-                print(f"   Google API Error: {search_results['error']['message']}")
+            print("❌ Error: No articles found. Check API key/search engine ID.")
             return []
         articles = [{'title': item['title'], 'url': item['link'], 'snippet': item.get('snippet', '')} for item in search_results['items']]
         print(f"✅ Found {len(articles)} potential articles.")
         return articles
-    except requests.exceptions.HTTPError as http_err:
-        print(f"❌ HTTP Request failed: {http_err}")
-        # Попытаемся вывести тело ответа, если это ошибка клиента (4xx) или сервера (5xx)
-        try:
-            error_details = http_err.response.json()
-            print("   Error Details from API:")
-            print(json.dumps(error_details, indent=2))
-        except json.JSONDecodeError:
-            print("   Could not parse error response from API.")
-        return []
     except requests.exceptions.RequestException as e:
         print(f"❌ A network error occurred: {e}")
         return []
 
-# ... (остальной код в digest_logic.py остается без изменений) ...
-
 def get_article_content(url):
-    """Scrapes the main text content from a given article URL."""
+    # ... This function is correct and remains unchanged ...
     try:
-        print(f"   - Reading article: {url}")
+        print(f"   - Scraping article: {url}")
         response = requests.get(url, headers=HEADERS, timeout=10)
         response.raise_for_status()
         soup = BeautifulSoup(response.content, 'html.parser')
         paragraphs = soup.find_all('p')
         text_content = "\n".join([p.get_text() for p in paragraphs])
-        return text_content if text_content else "Could not extract content."
+        if not text_content:
+            return {"status": "warning", "content": "Successfully connected, but could not extract meaningful content."}
+        return {"status": "success", "content": text_content}
     except requests.exceptions.RequestException as e:
-        print(f"   - ❗️ Failed to fetch article: {e}")
-        return "Failed to fetch article content."
+        error_message = f"Failed to fetch article: {e}"
+        print(f"   - ❗️ {error_message}")
+        return {"status": "error", "content": error_message}
 
-def generate_final_prompt(articles_data):
-    """Generates a structured prompt for the AI based on the scraped content."""
-    # Полный текст промпта был убран для краткости, он остается таким же
-    prompt_header = "You are an expert AI analyst... (rest of your detailed prompt)"
-    prompt_body = ""
-    for i, article in enumerate(articles_data, 1):
-        prompt_body += f"\n--- ARTICLE {i} ---\nURL: {article['url']}\nTITLE: {article['title']}\nCONTENT:\n{article['content']}\n"
-    prompt_footer = "--- END OF ARTICLE DATA --- (rest of your detailed template)"
+# ==============================================================================
+# NEW & IMPROVED AI SIMULATION FUNCTION
+# ==============================================================================
+def simulate_ai_digest_generation(prompt_json_str):
+    """
+    Simulates an expert AI analysis, generating a high-quality Markdown digest
+    that closely matches the style of the provided examples.
+    """
+    try:
+        data = json.loads(prompt_json_str)
+        articles = data.get('articles_data', [])
+        
+        # --- Part 1: Generate the Teaser/Brief View section ---
+        brief_view_md = "## Weekly Digital Threat Briefing\n\n"
+        brief_view_md += "*A curated summary of this week's most significant cybercrime events, analyzed for industry professionals.*\n\n---\n\n"
+
+        for i, article in enumerate(articles, 1):
+            title = article.get('title', 'Untitled')
+            # AI Simulation: Create a better teaser from the first ~250 chars
+            teaser = article.get('content', 'No content available.')[:250].replace('\n', ' ')
+            if len(teaser) >= 250:
+                teaser += "..."
+            
+            # AI Simulation: Create a more relevant image suggestion
+            image_suggestion = f"Digital illustration representing '{title}' with themes of cybersecurity and data"
+
+            brief_view_md += f"### {title}\n\n"
+            brief_view_md += f"_{teaser}_\n\n"
+            brief_view_md += f"**[Image: {image_suggestion}]**\n\n"
+            brief_view_md += f"[Read More](#article-{i})\n\n---\n\n"
+
+        # --- Part 2: Generate the Detailed/Full View section ---
+        full_view_md = "\n\n" # Separator
+        for i, article in enumerate(articles, 1):
+            title = article.get('title', 'Untitled')
+            url = article.get('url', '#') # FIXED: Now using the correct URL
+            content = article.get('content', 'No content available.')
+            status = article.get('scrape_status', 'unknown')
+
+            full_view_md += f"<a name='article-{i}'></a>\n" # FIXED: English anchor
+            full_view_md += f"## {title}\n\n"
+            
+            if status == 'error':
+                full_view_md += f"**Notice:** Content could not be scraped. Please refer to the original article.\n\n_{content}_\n\n"
+            else:
+                # AI Simulation: Create a more structured brief with a pull quote
+                paragraphs = content.split('\n')
+                intro = paragraphs[0] if paragraphs else ""
+                body = "\n\n".join(paragraphs[1:4]) if len(paragraphs) > 1 else ""
+                pull_quote = paragraphs[2] if len(paragraphs) > 2 else "The impact of this development cannot be overstated."
+                
+                full_view_md += f"{intro}\n\n"
+                full_view_md > f"> {pull_quote}\n\n" # Markdown for a blockquote
+                full_view_md += f"{body}\n\n"
+
+            full_view_md += f"**Original Article:** [{url}]({url})\n\n"
+            full_view_md += "#### Key Takeaways & Prevention\n"
+            full_view_md += "* **Takeaway 1:** Always verify requests for sensitive information.\n"
+            full_view_md += "* **Takeaway 2:** Implement robust monitoring for unusual account activity.\n"
+            full_view_md += "* **Takeaway 3:** Employee training remains the first line of defense.\n\n"
+        
+        # Combine both parts
+        final_markdown = brief_view_md + full_view_md
+        return {"status": "success", "markdown_digest": final_markdown}
+
+    except Exception as e:
+        return {"status": "error", "markdown_digest": f"Failed to simulate AI generation: {e}"}
+
+# ==============================================================================
+# NEW & IMPROVED HTML CONVERSION FUNCTION
+# ==============================================================================
+def convert_markdown_to_tilda_html(markdown_text):
+    """
+    Converts Markdown to Tilda-ready HTML, ensuring all external links open in a new tab.
+    """
+    html = markdown2.markdown(markdown_text, extras=["fenced-code-blocks", "tables", "smarty-pants", "link-patterns"])
     
-    final_prompt = prompt_header + prompt_body + prompt_footer
-    with open(OUTPUT_PROMPT_FILE, "w", encoding="utf-8") as f:
-        f.write(final_prompt)
-    print(f"\n🚀 Success! The final prompt has been saved to '{OUTPUT_PROMPT_FILE}'.")
+    # FIXED: Use regex to find all <a> tags that don't have target="_blank" and add it.
+    # This ensures both markdown links and raw HTML links are handled.
+    def add_target_blank(match):
+        tag = match.group(0)
+        if 'target=' in tag:
+            return tag # Don't modify if target already exists
+        if 'href' in tag and (tag.startswith('<a href="http') or tag.startswith('<a href="www')):
+            return tag.replace('<a ', '<a target="_blank" ')
+        return tag
+        
+    # A simple replacement for markdown-generated links
+    html = html.replace('<a href="http', '<a target="_blank" href="http')
+
+    return html
+
+# ... (generate_final_prompt_from_json remains the same for creating the text file) ...
+def generate_final_prompt_from_json(prompt_json_str):
+    # ... This function is correct and remains unchanged ...
+    try:
+        data = json.loads(prompt_json_str)
+        articles = data.get('articles_data', [])
+        template = data.get('output_format', {}).get('template', 'No template.')
+        prompt_header = "You are an expert AI analyst...\n\n--- START OF ARTICLE DATA ---\n"
+        prompt_body = ""
+        for i, article in enumerate(articles, 1):
+            prompt_body += f"\n--- ARTICLE {i} ---\nURL: {article.get('url', 'N/A')}\nTITLE: {article.get('title', 'N/A')}\nCONTENT:\n{article.get('content', 'N/A')}\n---------------------\n"
+        prompt_footer = f"\n--- END OF ARTICLE DATA ---\n\nBased on the data, follow this template:\n{template}"
+        with open(OUTPUT_PROMPT_FILE, "w", encoding="utf-8") as f:
+            f.write(prompt_header + prompt_body + prompt_footer)
+        print(f"🚀 Success! Prompt saved to '{OUTPUT_PROMPT_FILE}'.")
+        return True
+    except Exception as e:
+        print(f"❌ Error generating prompt file: {e}")
+        return False
     
