@@ -14,46 +14,94 @@
         button:hover, input[type="submit"]:hover { background-color: #0056b3; }
         textarea { width: 95%; height: 300px; font-family: monospace; font-size: 14px; padding: 15px; border-radius: 5px; border: 1px solid #ddd; }
         .digest-output { margin-top: 2em; padding: 20px; border: 1px solid #eee; border-radius: 5px; background-color: #fff; }
-        .digest-output h2 { margin-top: 0; }
         .message { padding: 15px; background-color: #e7f3fe; border: 1px solid #d0e8fc; color: #084298; border-radius: 5px; margin-bottom: 20px;}
+        .article-list { list-style-type: none; padding: 0; }
+        .article-item { margin-bottom: 15px; padding: 10px; border: 1px solid #eee; border-radius: 5px; }
+        .article-item label { display: block; font-weight: bold; }
+        .article-item p { margin: 5px 0 0; color: #555; font-size: 0.9em; }
+        input[type="checkbox"] { margin-right: 10px; transform: scale(1.2); }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>The Axionym Digest Generator</h1>
-        
+
         {% if message %}
             <div class="message">{{ message }}</div>
         {% endif %}
 
+        <!-- SECTION 1: Initial view or after prompt generation -->
+        <!-- This section is displayed if there are NO articles to select. -->
+        {% if not articles_to_select %}
         <div class="step">
-            <h2>Step 1: Generate Prompt</h2>
-            <p>Click the button below. The script will search for articles and ask you to select 5 of them <strong>in your terminal window</strong>.</p>
-            <form action="/generate" method="post">
-                <button type="submit">Generate AI Prompt</button>
+            <h2>Step 1: Search for Articles</h2>
+            <p>Click the button below to find the latest articles on cybercrime.</p>
+            <!-- This form correctly points to the /search-articles route -->
+            <form action="/search-articles" method="post">
+                <button type="submit">Search for Articles</button>
             </form>
         </div>
 
-        <div class="step">
-            <h2>Step 2: Get Digest from AI</h2>
-            <p>After step 1, a file named <code>final_prompt_for_ai.txt</code> will be created. Copy its content and paste it into your AI chat to get the final Markdown digest.</p>
-        </div>
-        
         <div class="step">
             <h2>Step 3: Paste and View Digest</h2>
-            <p>Paste the complete Markdown output from the AI into the box below and click "View Digest" to see the rendered result.</p>
+            <p>After receiving the digest from the AI, paste it here for a final preview.</p>
             <form action="/render" method="post">
                 <textarea name="digest_markdown" placeholder="Paste the final Markdown from the AI here..."></textarea><br><br>
-                <input type="submit" value="View Digest">
+                <input type="submit" value="Preview Digest">
             </form>
         </div>
+        {% endif %}
 
+        <!-- SECTION 2: Article Selection View -->
+        <!-- This section is displayed ONLY if there ARE articles to select. -->
+        {% if articles_to_select %}
+        <div class="step">
+            <h2>Step 2: Select 5 Articles</h2>
+            <p>Choose exactly 5 articles from the list below to generate the AI prompt.</p>
+            <!-- This form correctly points to the /generate-prompt route -->
+            <form action="/generate-prompt" method="post">
+                <ul class="article-list">
+                    {% for article in articles_to_select %}
+                    <li class="article-item">
+                        <label>
+                            <input type="checkbox" name="selected_articles" value="{{ loop.index0 }}">
+                            {{ article.title }}
+                        </label>
+                        <p>{{ article.snippet }}</p>
+                        <!-- Hidden fields to pass article data along with the selection -->
+                        <input type="hidden" name="article_title_{{ loop.index0 }}" value="{{ article.title }}">
+                        <input type="hidden" name="article_url_{{ loop.index0 }}" value="{{ article.url }}">
+                    </li>
+                    {% endfor %}
+                </ul>
+                <input type="submit" value="Generate AI Prompt">
+            </form>
+        </div>
+        {% endif %}
+        
+        <!-- SECTION 3: Final Digest Preview Area -->
+        <!-- This area is displayed only after you've submitted Markdown for rendering. -->
         {% if content %}
         <div class="digest-output">
-            <h2>Generated Digest Preview</h2>
+            <h2>Digest Preview</h2>
             {{ content|safe }}
         </div>
         {% endif %}
     </div>
+
+    <!-- JavaScript to limit checkbox selection to 5 -->
+    <script>
+        const checkboxes = document.querySelectorAll('input[name="selected_articles"]');
+        const limit = 5;
+        checkboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', () => {
+                const checkedCount = document.querySelectorAll('input[name="selected_articles"]:checked').length;
+                if (checkedCount > limit) {
+                    alert('You may only select up to 5 articles.');
+                    checkbox.checked = false;
+                }
+            });
+        });
+    </script>
 </body>
 </html>
