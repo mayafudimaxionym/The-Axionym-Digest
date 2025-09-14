@@ -1,4 +1,3 @@
-
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -113,3 +112,6 @@ venv.bak/
 
 # Pyre type checker
 .pyre/
+
+# Generated files
+final_prompt_for_ai.txt
